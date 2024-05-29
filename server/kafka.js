@@ -1,6 +1,18 @@
 const { Kafka } = require('kafkajs');
 import Recepcion from './src/models/receptionModel';
 
+import Broadcast from './src/classes/broadcast'
+
+// Función para enviar un mensaje
+async function sendMessage(event, data) {
+    const broadcast = new Broadcast
+    try {
+        await broadcast.run(event, data);
+    } catch (error) {
+        console.error('Error durante el broadcast:', error);
+    }
+}
+
 async function updateRecepcion(epc) {
 
     const consulta = {
@@ -24,7 +36,8 @@ async function updateRecepcion(epc) {
     try {
         const res = await Recepcion.updateOne(consulta, actualizacion, options);
         console.log('llamamos con -> ', epc)
-        return res
+        await sendMessage('event', { da: ta })
+        //return res
     } catch (error) {
         console.log('rror -> ', error.message)
     }
