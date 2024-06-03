@@ -3,6 +3,8 @@ import Recepcion from './src/models/receptionModel';
 
 import Broadcast from './src/classes/broadcast'
 
+import ExtError from './src/classes/ExtError'
+import Log from './src/classes/Log'
 // Función para enviar un mensaje
 async function sendMessage(event, data) {
     const broadcast = new Broadcast
@@ -21,7 +23,7 @@ async function updateRecepcion(epc) {
 
     const actualizacion = {
         $set: {
-            [`recepcionCajas.$[i].contenido.$[j].tags.${epc}.OUT`]: 1
+            [`recepcionCajas.$[i].contenido.$[j].tags.${epc}.out`]: 1
         }
     };
 
@@ -33,31 +35,49 @@ async function updateRecepcion(epc) {
     };
 
     // Ejecutar la actualización utilizando el método updateOne de MongoDB
-    try {
-        const res = await Recepcion.updateOne(consulta, actualizacion, options);
-        console.log('llamamos con -> ', epc)
-        await sendMessage('event', { da: ta })
-        //return res
-    } catch (error) {
-        console.log('rror -> ', error.message)
-    }
-
+    // try {
+    // console.log(consulta)
+    // console.log(actualizacion)
+    // console.log(options)
+    const res = await Recepcion.updateOne(consulta, actualizacion, options).exec();
+    console.log('res', res)
+    //return res
+    // } catch (error) {
+    //     throw new ExtError(error.message, 'actualizando-recepcion')
+    // }
 }
 
+const arrayG = []
 export async function kafkaConsumer() {
-    const kafka = new Kafka({
-        clientId: 'my-app',
-        brokers: ['88.198.208.224:9092']
-    });
+    // Callback personalizado para manejar errores
+    // async function handleAsyncError(error) {
+    //     try {
+    //         // Lógica para manejar el error, como registrar en un archivo o enviar a un servicio
+    //         console.log('Manejando error de forma asíncrona:', error.message);
+    //         // Simular una operación asíncrona, como una espera de 1 segundo
+    //         await new Promise(resolve => setTimeout(resolve, 1000));
+    //         console.log('Error manejado correctamente');
+    //     } catch (err) {
+    //         console.error('Error al manejar el error:', err);
+    //     }
+    // }
+    // O puedes pasar un path personalizado, por ejemplo, new Log('/ruta/al/archivo.json')
 
-    const consumer = kafka.consumer({ groupId: 'Quartup-logistics-9' });
 
-    await consumer.connect();
-    await consumer.subscribe({ topic: 'Reader', fromBeginning: true });
-
-    console.log("Esperando mensajes...");
 
     try {
+        const kafka = new Kafka({
+            clientId: 'my-app',
+            brokers: ['88.198.208.224:9092']
+        });
+
+
+        const consumer = kafka.consumer({ groupId: 'Quartup-logistics-70' });
+
+        await consumer.connect();
+        await consumer.subscribe({ topic: 'ReaderPrueba', fromBeginning: true });
+
+        console.log("Esperando mensajes...");
         await consumer.run({
             eachMessage: async ({ topic, partition, message }) => {
                 console.log({
@@ -65,14 +85,29 @@ export async function kafkaConsumer() {
                     offset: message.offset,
                     value: message.value.toString(),
                 });
-                const epc = JSON.parse(message.value.toString()).value.epc
-                updateRecepcion(epc)
-                // Aquí puedes procesar cada mensaje como desees
+                // // throw new Error('ell');
+                const epc = JSON.parse(message.value.toString()).epc
+                arrayG.push(epc);
+                console.log(arrayG);
+                await updateRecepcion(epc)
+
+                await sendMessage('logistics-consume-kafka', { epc: epc })
             },
         });
+
+        // Manejar errores
+        // consumer.on('consumer.crash', ({ payload }) => {
+        //     throw new ExtError('error.message', 'error-kafka')
+
+        //     handleError(payload.error);
+        // });
+        // consumer.on('consumer.crash', (payload) => {
+        //     const logger = new Log()
+        //     logger.run({ evento: 'error.name', message: 'error.message', time: new Date() })
+
+        // });
+
     } catch (error) {
-        console.error("Error al consumir mensajes:", error);
+        throw new ExtError(error.message, 'kafka-consumer')
     }
 }
-
-// consumeMessages();

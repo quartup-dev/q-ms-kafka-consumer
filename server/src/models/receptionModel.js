@@ -5,7 +5,8 @@ const contenidoSchema = new Schema({
     //estructura de cada objeto dentro de contenido
     tags: {
         type: Map, of: new Schema({
-            OUT: { type: Number }
+            in: { type: Number },
+            out: { type: Number },
         }, { _id: false })
     }
 }, { _id: false });

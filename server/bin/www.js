@@ -4,6 +4,8 @@ import { kafkaConsumer } from '../kafka';
 // import http from 'http';
 const debug = debugLib('q-mss-test:server');
 const port = normalizePort(process.env.APP_PORT || '4999');
+import Log from '../src/classes/Log'
+
 app.set('port', port);
 
 
@@ -78,11 +80,18 @@ function onError(error) {
  * Event listener for HTTP server "listening" event.
  */
 
-function onListening() {
+async function onListening() {
     var addr = server.address();
     var bind = typeof addr === 'string'
         ? 'pipe ' + addr
         : 'port ' + addr.port;
     debug('Listening on ' + bind);
-    kafkaConsumer().catch(error => console.error('Error starting Kafka consumer:', error));
+    const logger = new Log();
+    try {
+        await kafkaConsumer()
+    } catch (error) {
+        console.error('Error -> ' + error.name + ":", error.message);
+        logger.run({ evento: error.name, message: error.message, time: new Date() })
+    }
+    // .catch(error =>
 }
