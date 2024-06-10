@@ -1,5 +1,6 @@
 // Broadcast.js
 const io = require('socket.io-client');
+const { kafkaConsumer } = require('../../kafka');
 
 class Broadcast {
     constructor() {
@@ -8,6 +9,8 @@ class Broadcast {
 
     async connect() {
         if (!this.socket) {
+            console.log('pasa');
+            console.log(process.env.BROADCAST_SERVER)
             this.socket = io(process.env.BROADCAST_SERVER, {
                 autoConnect: false,
                 reconnectionAttempts: 3, // Intentos de reconexión, por ejemplo
@@ -53,6 +56,7 @@ class Broadcast {
     async run(event, data) {
         try {
             await this.connect();
+            console.log('si paso por aquie es que tengo conexion')
             this.socket.emit(event, data);
             console.log(`Evento '${event}' emitido con éxito`);
         } catch (error) {

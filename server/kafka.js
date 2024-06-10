@@ -47,23 +47,8 @@ async function updateRecepcion(epc) {
     // }
 }
 
-const arrayG = []
+
 export async function kafkaConsumer() {
-    // Callback personalizado para manejar errores
-    // async function handleAsyncError(error) {
-    //     try {
-    //         // Lógica para manejar el error, como registrar en un archivo o enviar a un servicio
-    //         console.log('Manejando error de forma asíncrona:', error.message);
-    //         // Simular una operación asíncrona, como una espera de 1 segundo
-    //         await new Promise(resolve => setTimeout(resolve, 1000));
-    //         console.log('Error manejado correctamente');
-    //     } catch (err) {
-    //         console.error('Error al manejar el error:', err);
-    //     }
-    // }
-    // O puedes pasar un path personalizado, por ejemplo, new Log('/ruta/al/archivo.json')
-
-
 
     try {
         const kafka = new Kafka({
@@ -71,11 +56,10 @@ export async function kafkaConsumer() {
             brokers: ['88.198.208.224:9092']
         });
 
-
-        const consumer = kafka.consumer({ groupId: 'Quartup-logistics-70' });
+        const consumer = kafka.consumer({ groupId: 'Quartup-logistics-80' });
 
         await consumer.connect();
-        await consumer.subscribe({ topic: 'ReaderPrueba', fromBeginning: true });
+        await consumer.subscribe({ topic: 'Reader', fromBeginning: true });
 
         console.log("Esperando mensajes...");
         await consumer.run({
@@ -87,25 +71,12 @@ export async function kafkaConsumer() {
                 });
                 // // throw new Error('ell');
                 const epc = JSON.parse(message.value.toString()).epc
-                arrayG.push(epc);
-                console.log(arrayG);
-                await updateRecepcion(epc)
 
+                await updateRecepcion(epc)
                 await sendMessage('logistics-consume-kafka', { epc: epc })
             },
         });
 
-        // Manejar errores
-        // consumer.on('consumer.crash', ({ payload }) => {
-        //     throw new ExtError('error.message', 'error-kafka')
-
-        //     handleError(payload.error);
-        // });
-        // consumer.on('consumer.crash', (payload) => {
-        //     const logger = new Log()
-        //     logger.run({ evento: 'error.name', message: 'error.message', time: new Date() })
-
-        // });
 
     } catch (error) {
         throw new ExtError(error.message, 'kafka-consumer')
